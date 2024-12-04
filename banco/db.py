@@ -75,7 +75,8 @@ def executar_query(query, params=None):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
-
+def format_autopct(pct):
+    return f'{pct:.1f}%'  # Formato dos números
 
 
 def buscar_metricas_por_vaga(nome_vaga):
@@ -142,8 +143,15 @@ def criar_grafico_pizza(metricas, nome_arquivo="grafico_metricas.png"):
         # Verificar dados válidos
         if total_visualizacoes > 0:
             # Adicionar categorias e proporções
-            categorias.append(f"{metrica['vaga']} - Inscritos")
-            categorias.append(f"{metrica['vaga']} - Não Inscritos")
+            categoria_inscritos = f"{metrica['vaga']} \n (Inscritos)"
+            categoria_nao_inscritos = f"{metrica['vaga']}\n (Não Inscritos)"
+
+            # Ajustar para rótulos longos
+            categoria_inscritos = "\n".join(categoria_inscritos.split(" ", 3))
+            categoria_nao_inscritos = "\n".join(categoria_nao_inscritos.split(" ", 3))
+
+            categorias.append(categoria_inscritos)
+            categorias.append(categoria_nao_inscritos)
 
             # Calcular porcentagens
             inscritos = (total_inscricoes / total_visualizacoes) * 100
@@ -153,33 +161,37 @@ def criar_grafico_pizza(metricas, nome_arquivo="grafico_metricas.png"):
         else:
             print(f"Vaga ignorada: '{metrica['vaga']}' - Visualizações inválidas ou zero.")
 
-    # Verificar se há valores válidos
-    if not valores or sum(valores) == 0:
-        print("Nenhum dado válido para criar o gráfico de pizza.")
+    # Verificar se há valores válidos e categorias correspondentes
+    if not valores or len(categorias) != len(valores):
+        print("Erro: As categorias e os valores não correspondem.")
         return None
 
     # Criar gráfico de pizza
-    plt.figure(figsize=(10, 8))
-    plt.pie(
-        valores,
-        labels=categorias,
-        autopct=lambda p: f'{p:.1f}%',  # Formato das porcentagens
-        startangle=140,
-        colors=plt.cm.Paired.colors,
-        textprops={'fontsize': 16}  # Aumentar fonte dos rótulos
-    )
+    try:
+        fig, ax = plt.subplots(figsize=(10, 8))
+        wedges, texts, autotexts = ax.pie(
+            valores,
+            labels=categorias,
+            autopct=format_autopct,  # Adiciona os números
+            startangle=140,
+            colors=plt.cm.Paired.colors,  # Define uma paleta de cores
+            textprops={'fontsize': 18}  # Ajusta o tamanho dos rótulos (categorias)
+)
+        for autotext in autotexts:
+            autotext.set_fontsize(18)  # Aumenta o tamanho da fonte dos números
+        # Configurar título
+        plt.title("Porcentagem de Inscrições por Visualizaçao", fontsize=25, fontweight="bold")
 
-    # Configurar título
-    plt.title("Porcentagem de Inscrições por Visualizaçao", fontsize=20, fontweight="bold")
+        # Salvar gráfico
+        caminho_grafico = os.path.join(UPLOAD_FOLDER, nome_arquivo)
+        plt.tight_layout()
+        plt.savefig(caminho_grafico)
+        plt.close()
 
-    # Salvar gráfico
-    caminho_grafico = os.path.join(UPLOAD_FOLDER, nome_arquivo)
-    plt.tight_layout()
-    plt.savefig(caminho_grafico)
-    plt.close()
-
-    return caminho_grafico
-
+        return caminho_grafico
+    except Exception as e:
+        print(f"Erro ao criar gráfico: {e}")
+        return None
 
 
 
