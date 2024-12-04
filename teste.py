@@ -8,6 +8,7 @@ from banco.db import gerar_pdf_relatorio_flexivel
 import os
 from openai import OpenAI
 from dotenv import load_dotenv  # Importa dotenv para carregar variáveis de ambiente
+from waitress import serve
 
 
 app = Flask(__name__)
@@ -289,4 +290,5 @@ def download_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', 5000))
+    serve(app, host='0.0.0.0', port=port)
