@@ -73,7 +73,7 @@ def buscar_detalhes_vaga(nome_vaga, historico_intencao, nome_vaga_armazem):
             introducao = random.choice(introducoes)  # Escolhe uma frase aleatória
             # Adiciona a intenção de gerar relatório ao histórico usando o nome real da vaga
             nome_real_vaga = vaga['nome']  # Nome correto retornado do banco
-            historico_intencao.append({"intencao": "gerar_relatorio", "vaga": nome_real_vaga})
+            historico_intencao.append({"intencao": "mostrar_metricas", "vaga": vaga['nome']})
             nome_vaga_armazem.append(nome_real_vaga)  # Armazena o nome real da vaga no armazém
 
             detalhes = (
@@ -88,6 +88,7 @@ def buscar_detalhes_vaga(nome_vaga, historico_intencao, nome_vaga_armazem):
             )
             pergunta = random.choice(perguntas_possiveis)  # Escolhe uma pergunta aleatoriamente
             return f"{detalhes}\n\n{pergunta}"  # Adiciona a pergunta após os detalhes
+          
         else:
             return "Desculpe, não encontrei detalhes para essa vaga ou ela não está aberta no momento."
     except Exception as e:

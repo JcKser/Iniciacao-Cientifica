@@ -1,10 +1,10 @@
 from flask import Flask, request, send_from_directory
 from twilio.twiml.messaging_response import MessagingResponse
 import random
-from listas import respostas_iniciais, keywords_listavagas, resposta_listavagas, respostas_positivas, respostas_negativas
+from listas import respostas_iniciais, keywords_listavagas, resposta_listavagas, respostas_positivas, respostas_negativas, frases_buscar_vaga
 from banco.database import listar_vagas_ordenadas, buscar_detalhes_vaga
 from rapidfuzz import process, fuzz
-from banco.db import gerar_pdf_relatorio_flexivel
+from banco.db import gerar_pdf_relatorio_flexivel, buscar_metricas_por_vaga
 import os
 from openai import OpenAI
 from dotenv import load_dotenv  # Importa dotenv para carregar variáveis de ambiente
@@ -15,8 +15,10 @@ app = Flask(__name__)
 load_dotenv()  # Sem necessidade de especificar o caminho se o .env estiver na mesma pasta.
 
 # Recuperar a chave da API
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
+client = OpenAI(
+  api_key=os.environ['OPENAI_API_KEY'],  # this is also the default, it can be omitted
+)
+if not client.api_key:
     raise ValueError("A chave OPENAI_API_KEY não foi encontrada no arquivo .env")
 
 
@@ -40,68 +42,187 @@ def reconhecer_palavra_chave(mensagem, keywords_listavagas, similaridade_minima=
         return True, palavra_similar
     return False, None
 
-def processar_resposta_usuario(mensagem, historico_intencao, lista_mensagens):
-    """
-    Processa a resposta do usuário e lida com respostas positivas, negativas e mensagens fora do escopo.
-    """
-    print(f"Mensagem recebida: {mensagem}")
-    print(f"Histórico de intenção: {historico_intencao}")
-
-    # Função auxiliar para detectar a intenção com fuzziness
+    # Detectar respostas positivas e negativas
     def detectar_resposta(categorias, mensagem_usuario, limiar=75):
         resultado = process.extractOne(mensagem_usuario, categorias, scorer=fuzz.ratio)
-        if resultado and resultado[1] >= limiar:  # Verifica se a similaridade está acima do limiar
+        if resultado and resultado[1] >= limiar:
             return True, resultado[0]
         return False, None
 
-    # Verificar se a intenção é gerar relatório
-    if historico_intencao and historico_intencao[-1]["intencao"] == "gerar_relatorio":
-        nome_vaga = historico_intencao[-1]["vaga"]
-        print(f"Nome da vaga: {nome_vaga}")
+    # Verificar última intenção
+    if historico_intencao:
+        ultima_intencao = historico_intencao[-1]["intencao"]
 
-        # Detectar respostas positivas ou negativas
-        positiva, resposta_positiva_detectada = detectar_resposta(respostas_positivas, mensagem.lower())
-        negativa, resposta_negativa_detectada = detectar_resposta(respostas_negativas, mensagem.lower())
+        # Intenção: Mostrar métricas adicionais
+        if ultima_intencao == "mostrar_metricas":
+            positiva, _ = detectar_resposta(respostas_positivas, mensagem.lower())
+            negativa, _ = detectar_resposta(respostas_negativas, mensagem.lower())
+
+            if positiva:
+                nome_vaga = historico_intencao[-1]["vaga"]
+                metricas = buscar_metricas_por_vaga(nome_vaga)
+                if metricas:
+                    detalhes_metricas = "\n📊 **Métricas Adicionais:**\n"
+                    for metrica in metricas:
+                        detalhes_metricas += (
+                            f"- Visualizações: {metrica.get('visualizacoes', 0)}\n"
+                            f"- Inscrições: {metrica.get('inscricoes', 0)}\n"
+                            f"- Inscrições Iniciadas: {metrica.get('inscricoes_iniciadas', 0)}\n"
+                            f"- Desistências: {metrica.get('desistencias', 0)}\n"
+                        )
+                    lista_mensagens.append({"role": "assistant", "content": detalhes_metricas})
+                    # Pergunta se deseja gerar o PDF
+                    pergunta = "Deseja um relatório PDF com mais detalhes sobre essas métricas?"
+                    # Atualiza a intenção para "gerar_pdf"
+                    historico_intencao.append({"intencao": "gerar_pdf", "vaga": nome_vaga})
+                    return f"{detalhes_metricas}\n\n{pergunta}", lista_mensagens
+                else:
+                    return "Não consegui encontrar métricas adicionais para esta vaga.", lista_mensagens
+
+            elif negativa:
+                return "Entendido! Se precisar de algo mais, é só perguntar.", lista_mensagens
+
+        # Intenção: Gerar PDF
+        elif ultima_intencao == "gerar_pdf":
+            positiva, _ = detectar_resposta(respostas_positivas, mensagem.lower())
+            negativa, _ = detectar_resposta(respostas_negativas, mensagem.lower())
+
+            if positiva:
+                nome_vaga = historico_intencao[-1]["vaga"]
+                try:
+                    nome_arquivo = f"relatorio_{nome_vaga.replace(' ', '_').lower()}.pdf"
+                    caminho_destino = gerar_pdf_relatorio_flexivel(nome_arquivo=nome_arquivo, nome_vaga=nome_vaga)
+
+                    base_url = request.host_url
+                    timestamp = int(os.path.getmtime(caminho_destino))
+                    link_pdf = f"{base_url}static/{nome_arquivo}?v={timestamp}"
+
+                    resposta_pdf = f"O relatório foi gerado com sucesso!\n\nAcesse o relatório clicando no link abaixo:\n{link_pdf}"
+                    lista_mensagens.append({"role": "assistant", "content": resposta_pdf})
+                    return resposta_pdf, lista_mensagens
+                except Exception as e:
+                    print(f"Erro ao gerar relatório: {e}")
+                    return "Erro ao gerar o relatório. Tente novamente mais tarde.", lista_mensagens
+
+            elif negativa:
+                return "Entendido! Se precisar de mais informações, estou aqui para ajudar.", lista_mensagens
+
+    # Caso nenhuma intenção seja encontrada
+    return None, lista_mensagens
+
+def detectar_resposta(mensagem, categorias, limiar=75):
+    """
+    Detecta se a mensagem do usuário corresponde a alguma categoria usando fuzzy matching.
+    """
+    resultado = process.extractOne(mensagem.lower(), categorias, scorer=fuzz.ratio)
+    if resultado and resultado[1] >= limiar:
+        return resultado[0]
+    return None
+
+def processar_resposta_usuario(mensagem, historico_intencao, lista_mensagens):
+    """
+    Processa a intenção do usuário com base no histórico de intenções.
+    """
+    # Verifica se lista_mensagens é uma lista
+    if not isinstance(lista_mensagens, list):
+        raise TypeError("A variável 'lista_mensagens' deve ser uma lista.")
+
+    if not historico_intencao:
+        return None, "Nenhuma intenção no histórico."
+
+    ultima_intencao = historico_intencao[-1]["intencao"]
+
+    # Intenção: Validar detalhes da vaga
+    if ultima_intencao == "validar_detalhes_vaga":
+        nome_vaga = historico_intencao[-1]["vaga"]
+        metricas = buscar_metricas_por_vaga(nome_vaga)
+
+        if metricas:
+            detalhes_metricas = "\n📊 **Métricas Adicionais:**\n"
+            for metrica in metricas:
+                detalhes_metricas += (
+                    f"- Visualizações: {metrica.get('visualizacoes', 0)}\n"
+                    f"- Inscrições: {metrica.get('inscricoes', 0)}\n"
+                    f"- Inscrições Iniciadas: {metrica.get('inscricoes_iniciadas', 0)}\n"
+                    f"- Desistências: {metrica.get('desistencias', 0)}\n"
+                )
+            pergunta = "Deseja um relatório PDF com mais detalhes sobre essas métricas?"
+            lista_mensagens.append({"role": "assistant", "content": detalhes_metricas})
+            
+            # Atualiza a intenção para "oferecer_gerar_pdf"
+            historico_intencao.append({"intencao": "oferecer_gerar_pdf", "vaga": nome_vaga})
+            return f"{detalhes_metricas}\n\n{pergunta}", lista_mensagens
+        else:
+            return None, "Não consegui encontrar métricas adicionais para esta vaga."
+
+    # Intenção: Oferecer geração de PDF
+    elif ultima_intencao == "oferecer_gerar_pdf":
+        positiva = detectar_resposta(mensagem, respostas_positivas)
+        negativa = detectar_resposta(mensagem, respostas_negativas)
 
         if positiva:
+            # Atualiza a intenção para "confirmar_gerar_pdf"
+            historico_intencao.append({"intencao": "confirmar_gerar_pdf", "vaga": historico_intencao[-1]["vaga"]})
+            return "Você confirma que deseja gerar o relatório PDF?", lista_mensagens
+
+        elif negativa:
+            return "Entendido! Se precisar de mais informações, estou aqui para ajudar.", lista_mensagens
+
+    # Intenção: Confirmar geração de PDF
+    elif ultima_intencao == "confirmar_gerar_pdf":
+        positiva = detectar_resposta(mensagem, respostas_positivas)
+        negativa = detectar_resposta(mensagem, respostas_negativas)
+
+        if positiva:
+            nome_vaga = historico_intencao[-1]["vaga"]
             try:
-                # Gera o nome do arquivo e o caminho do PDF
                 nome_arquivo = f"relatorio_{nome_vaga.replace(' ', '_').lower()}.pdf"
                 caminho_destino = gerar_pdf_relatorio_flexivel(nome_arquivo=nome_arquivo, nome_vaga=nome_vaga)
 
-                # Base URL e timestamp para criar o link com cache-busting
                 base_url = request.host_url
                 timestamp = int(os.path.getmtime(caminho_destino))
                 link_pdf = f"{base_url}static/{nome_arquivo}?v={timestamp}"
 
-                # Texto com link "implícito"
-                mensagem_com_link = f'O relatório foi gerado com sucesso! Acesse aqui: [> PDF]({link_pdf})'
-
-                # Adiciona a mensagem à lista de respostas
-                lista_mensagens.append({"role": "assistant", "content": mensagem_com_link})
-                print(f"Relatório gerado com sucesso: {link_pdf}")
-                return mensagem_com_link, lista_mensagens
+                resposta_pdf = f"O relatório foi gerado com sucesso!\n\nAcesse o relatório clicando no link abaixo:\n{link_pdf}"
+                lista_mensagens.append({"role": "assistant", "content": resposta_pdf})
+                return resposta_pdf, lista_mensagens
             except Exception as e:
                 print(f"Erro ao gerar relatório: {e}")
-                lista_mensagens.append({"role": "assistant", "content": "Erro ao gerar o relatório. Tente novamente mais tarde."})
                 return "Erro ao gerar o relatório. Tente novamente mais tarde.", lista_mensagens
 
         elif negativa:
-            # Resposta negativa: Apenas encerra a intenção
-            print(f"Resposta negativa detectada: {resposta_negativa_detectada}")
-            return "Entendido! Se precisar de mais informações, é só perguntar.", lista_mensagens
+            return "Entendido! Se precisar de mais informações, estou aqui para ajudar.", lista_mensagens
 
-        else:
-            # Mensagem não corresponde a nenhuma categoria
-            print("Mensagem fora do escopo.")
-            return (
-                "Desculpe, não entendi sua resposta. Por favor, responda com 'sim' para gerar o relatório ou 'não' caso não deseje o relatório.",
-                lista_mensagens,
-            )
+        # Caso a resposta não seja clara
+        return "Desculpe, não entendi sua resposta. Você deseja gerar o relatório PDF?", lista_mensagens
 
-    # Caso nenhuma intenção correspondente seja encontrada
-    print("Nenhuma intenção correspondente encontrada.")
-    return None, lista_mensagens
+def calcular_taxas_por_vaga(nome_vaga):
+    """
+    Calcula taxas específicas (engajamento, conversão, conclusão, desistência) para uma vaga.
+    """
+    metricas = buscar_metricas_por_vaga(nome_vaga)
+    if not metricas:
+        return f"Não encontrei métricas para a vaga '{nome_vaga}'."
+
+    for metrica in metricas:
+        visualizacoes = metrica.get("visualizacoes", 0)
+        inscricoes_iniciadas = metrica.get("inscricoes_iniciadas", 0)
+        inscritos = metrica.get("inscricoes", 0)
+        desistencias = metrica.get("desistencias", 0)
+
+        taxa_engajamento = (inscricoes_iniciadas / visualizacoes) * 100 if visualizacoes > 0 else 0
+        taxa_conversao = (inscritos / visualizacoes) * 100 if visualizacoes > 0 else 0
+        taxa_conclusao = (inscritos / inscricoes_iniciadas) * 100 if inscricoes_iniciadas > 0 else 0
+        taxa_desistencia = (desistencias / inscricoes_iniciadas) * 100 if inscricoes_iniciadas > 0 else 0
+
+        return (
+            f"📊 Taxas para a vaga '{nome_vaga}':\n"
+            f"- Taxa de Engajamento: {taxa_engajamento:.2f}%\n"
+            f"- Taxa de Conversão: {taxa_conversao:.2f}%\n"
+            f"- Taxa de Conclusão: {taxa_conclusao:.2f}%\n"
+            f"- Taxa de Desistência: {taxa_desistencia:.2f}%"
+        )
+
 
 
 def contar_tokens(texto):
@@ -118,36 +239,23 @@ def resumir_mensagens(lista_mensagens):
     ).choices[0].message['content']
     return resumo
 
-def buscar_vaga_flexivel(nome_vaga, historico_intencao, nome_vaga_armazem):
+def buscar_vaga_flexivel(nome_vaga, vagas):
     """
-    Busca uma vaga com uma correspondência flexível no nome e retorna os detalhes.
+    Busca uma vaga com correspondência flexível e retorna os detalhes ou erro.
     """
-    if not nome_vaga:
-        return "Por favor, forneça um nome de vaga válido para buscar os detalhes."
-    
-    vagas = listar_vagas_ordenadas()  # Lista todas as vagas disponíveis
-    if not vagas:
-        return "Não há vagas disponíveis para buscar no momento."
+    if not nome_vaga.strip():
+        return None, "Por favor, forneça um nome de vaga válido para buscar os detalhes."
 
-    nomes_vagas = [vaga['nome'] for vaga in vagas]  # Extrai os nomes das vagas
-    
-    # Encontra a vaga mais similar ao nome fornecido
-    resultado = process.extractOne(nome_vaga, nomes_vagas)
-    print(f"Resultado da correspondência: {resultado}")
-    
+    nomes_vagas = [vaga['nome'] for vaga in vagas]
+    resultado = process.extractOne(nome_vaga, nomes_vagas, scorer=fuzz.ratio)
+
     if resultado:
         nome_candidato, similaridade = resultado[0], resultado[1]
-        print(f"Vaga encontrada: {nome_candidato} com similaridade de {similaridade}%")
-        
-        # Definir um limite de similaridade para aceitar a correspondência
         if similaridade >= 85:
             vaga_encontrada = next((vaga for vaga in vagas if vaga['nome'] == nome_candidato), None)
-            if vaga_encontrada:
-                # Armazena o nome da vaga encontrada no armazém
-                nome_vaga_armazem.append(vaga_encontrada['nome'])
-                return buscar_detalhes_vaga(vaga_encontrada['nome'], historico_intencao, nome_vaga_armazem)
+            return vaga_encontrada, None
 
-    return f"Desculpe, não consegui encontrar nenhuma vaga parecida com '{nome_vaga}'. Tente novamente com outro nome ou verifique a lista de vagas disponíveis."
+    return None, f"Desculpe, não consegui encontrar nenhuma vaga parecida com '{nome_vaga}'. Tente novamente."
 
 def enviar_mensagem(mensagem, lista_mensagens):
     """
@@ -155,42 +263,23 @@ def enviar_mensagem(mensagem, lista_mensagens):
     incluindo geração de relatórios, listagem de vagas e detalhamento de uma vaga.
     """
     global historico_intencao
+    positiva = detectar_resposta(mensagem, respostas_positivas)
+    negativa = detectar_resposta(mensagem, respostas_negativas)
 
-    # Verificar se a última intenção é gerar relatório
-    # Verificar se a última intenção é gerar relatório
-    if historico_intencao and historico_intencao[-1]["intencao"] == "validar_detalhes_vaga":
-        positiva_resultado = process.extractOne(mensagem.lower(), respostas_positivas, scorer=fuzz.ratio)
-        negativa_resultado = process.extractOne(mensagem.lower(), respostas_negativas, scorer=fuzz.ratio)
-
-        positiva = positiva_resultado[0] if positiva_resultado and positiva_resultado[1] >= 75 else None
-        negativa = negativa_resultado[0] if negativa_resultado and negativa_resultado[1] >= 75 else None
-
-        if positiva:
-            # Recuperar o nome da vaga
-            nome_vaga = historico_intencao[-1]["vaga"]
-            try:
-                # Gerar o relatório
-                nome_arquivo = f"relatorio_{nome_vaga.replace(' ', '_').lower()}.pdf"
-                caminho_destino = gerar_pdf_relatorio_flexivel(nome_arquivo=nome_arquivo, nome_vaga=nome_vaga)
-
-                base_url = request.host_url
-                timestamp = int(os.path.getmtime(caminho_destino))
-                link_pdf = f"{base_url}static/{nome_arquivo}?v={timestamp}"
-
-                resposta_texto = f"O relatório foi gerado com sucesso!\n\nAcesse o relatório clicando no link abaixo:\n{link_pdf}"
-                lista_mensagens.append({"role": "assistant", "content": resposta_texto})
-                return resposta_texto, lista_mensagens
-            except Exception as e:
-                print(f"Erro ao gerar relatório: {e}")
-                resposta_texto = "Erro ao gerar o relatório. Tente novamente mais tarde."
-                lista_mensagens.append({"role": "assistant", "content": resposta_texto})
-                return resposta_texto, lista_mensagens
-
-        elif negativa:
-            resposta_texto = "Entendido! Se precisar de mais informações, é só perguntar."
-            lista_mensagens.append({"role": "assistant", "content": resposta_texto})
+    # 1. Processar respostas do usuário
+        # Verificar se a última intenção é metrificar ou gerar pdf
+    if positiva:
+        resposta_texto, lista_mensagens = processar_resposta_usuario(mensagem, historico_intencao, lista_mensagens)
+        if resposta_texto:
             return resposta_texto, lista_mensagens
 
+    elif negativa:
+        resposta_texto = "Entendido! Se precisar de mais informações, é só perguntar."
+        lista_mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto, lista_mensagens
+    
+  
+   
     # 2. Verificar saudações iniciais
     saudacoes = ["oi", "olá", "hello", "hey", "bom dia", "boa tarde", "boa noite"]
     if any(saudacao in mensagem.lower() for saudacao in saudacoes) and len(lista_mensagens) == 0:
@@ -199,10 +288,8 @@ def enviar_mensagem(mensagem, lista_mensagens):
         return resposta_texto, lista_mensagens
 
     # 3. Verificar intenção de listar vagas
-
-    similaridade_corte = 80  # Define a porcentagem mínima de similaridade
-
-    # Reconhecer a palavra-chave com similaridade
+          # Reconhecer a palavra-chave com similaridade
+    similaridade_corte = 80  # Define a porcentagem mínima de similaridade   
     match, palavra_similar = reconhecer_palavra_chave(mensagem.lower(), keywords_listavagas)
     if match:
         similaridade = fuzz.ratio(mensagem.lower(), palavra_similar.lower())
@@ -219,27 +306,59 @@ def enviar_mensagem(mensagem, lista_mensagens):
             resposta_texto = "Desculpe, não entendi bem. Pode reformular sua pergunta?"
             lista_mensagens.append({"role": "assistant", "content": resposta_texto})
             return resposta_texto, lista_mensagens
+    
+    # 4. Verificar pedidos de taxas por vaga
 
 
-    # 4. Buscar detalhes da vaga
-    detalhes_vaga = buscar_vaga_flexivel(mensagem, historico_intencao, nome_vaga_armazem)
+    # Verificar se o usuário está buscando detalhes de uma vaga
+    # Buscar detalhes da vaga
+    # Buscar detalhes da vaga
+    if any(fuzz.partial_ratio(mensagem.lower(), frase) >= 80 for frase in frases_buscar_vaga) or \
+        (historico_intencao and historico_intencao[-1]["intencao"] == "listar_vagas") or \
+        mensagem.lower() in [vaga['nome'].lower() for vaga in listar_vagas_ordenadas()]:  # Nome da vaga diretamente
 
-    if detalhes_vaga != "Desculpe, não encontrei detalhes para essa vaga ou ela não está aberta no momento.":
-        nome_vaga = nome_vaga_armazem[-1] if nome_vaga_armazem else "vaga não especificada"
-        historico_intencao.append({"intencao": "validar_detalhes_vaga", "vaga": nome_vaga})
-        lista_mensagens.append({"role": "assistant", "content": detalhes_vaga + "\n\nDeseja um relatório desta vaga? Responda 'sim' para gerar o relatório."})
-        return detalhes_vaga, lista_mensagens
+        # Listar todas as vagas
+        vagas = listar_vagas_ordenadas()
 
-    # 5. Adicionar mensagem do usuário ao histórico
+        # Extrair o nome da vaga da mensagem
+        nome_vaga = None
+
+        # Detectar a frase base e extrair o texto que vem após ela
+        for frase in frases_buscar_vaga:
+            if fuzz.partial_ratio(mensagem.lower(), frase) >= 87:
+                nome_vaga = mensagem.lower().split(frase)[-1].strip()
+                break
+
+        # Caso nenhuma frase seja encontrada, assume que a mensagem é o nome da vaga
+        if not nome_vaga:
+            nome_vaga = mensagem.lower()
+
+        # Buscar vaga correspondente
+        vaga_encontrada, erro = buscar_vaga_flexivel(nome_vaga, vagas)
+
+        if erro:
+            lista_mensagens.append({"role": "assistant", "content": erro})
+            return erro, lista_mensagens
+
+        if vaga_encontrada:
+            # Retornar os detalhes da vaga
+            detalhes_vaga = buscar_detalhes_vaga(vaga_encontrada['nome'], historico_intencao, nome_vaga_armazem)
+            historico_intencao.append({"intencao": "validar_detalhes_vaga", "vaga": vaga_encontrada['nome']})
+            lista_mensagens.append({"role": "assistant", "content": detalhes_vaga})
+            return detalhes_vaga, lista_mensagens
+
+
+  
+    # 6. Adicionar mensagem do usuário ao histórico
     lista_mensagens.append({"role": "user", "content": mensagem})
 
-    # 6. Resumir mensagens se exceder o limite de tokens
+    # 7. Resumir mensagens se exceder o limite de tokens
     total_tokens = sum([contar_tokens(m['content']) for m in lista_mensagens])
     if total_tokens > 2048:
         resumo = resumir_mensagens(lista_mensagens)
         lista_mensagens = [{"role": "system", "content": resumo}]
 
-    # 7. Adicionar mensagem inicial do sistema se não estiver presente
+    # 8. Adicionar mensagem inicial do sistema se não estiver presente
     if not any(m['role'] == 'system' for m in lista_mensagens):
         lista_mensagens.insert(0, {
             "role": "system",
@@ -250,25 +369,29 @@ def enviar_mensagem(mensagem, lista_mensagens):
             )
         })
 
-    # 8. Enviar mensagem para a API OpenAI
     try:
-        resposta = OpenAI.chat.completions.create(
-            messages=lista_mensagens,
+        # Chamada à nova API usando o cliente
+        resposta = client.chat.completions.create(
             model="gpt-4",
+            messages=lista_mensagens
         )
+
+        # Extraindo a resposta do objeto retornado
         resposta_texto = resposta.choices[0].message.content
         lista_mensagens.append({"role": "assistant", "content": resposta_texto})
         return resposta_texto, lista_mensagens
+
     except Exception as e:
         print(f"Erro na API OpenAI: {e}")
         resposta_texto = "Erro ao processar sua solicitação. Tente novamente mais tarde."
         lista_mensagens.append({"role": "assistant", "content": resposta_texto})
         return resposta_texto, lista_mensagens
 
+
 @app.route('/bot', methods=['POST'])
 def bot():
     mensagem = request.form.get('Body')  # Captura a mensagem do usuário via POST
-    lista_mensagens = []  # Lista para armazenar o histórico de mensagens
+    lista_mensagens = []  # Sempre inicialize como uma lista
     
     resposta_texto, lista_mensagens = enviar_mensagem(mensagem, lista_mensagens)
     
@@ -276,7 +399,6 @@ def bot():
     resposta = MessagingResponse()
     resposta.message(resposta_texto)
     return str(resposta)
-
 
 
 @app.route('/')

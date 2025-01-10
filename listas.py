@@ -248,3 +248,37 @@ respostas_negativas = [
     "está bem assim",
     "não é algo que eu preciso"
 ]
+
+frases_buscar_vaga = [
+    "quero ver a vaga de",
+    "me mostre a vaga de",
+    "gostaria de ver detalhes da vaga de",
+    "mostre informações sobre a vaga de",
+    "quais são os detalhes da vaga de",
+    "quero informações da vaga de",
+    "pode mostrar a vaga de",
+    "me diga sobre a vaga de",
+    "preciso de informações da vaga de",
+    "gostaria de saber sobre a vaga de",
+    "pode falar sobre a vaga de",
+    "quero detalhes da vaga de",
+    "qual é a descrição da vaga de",
+    "explique mais sobre a vaga de",
+    "me informe sobre a vaga de",
+    "pode me mostrar os detalhes da vaga de",
+    "quero saber a respeito da vaga de",
+    "tenho interesse na vaga de",
+    "o que tem na vaga de",
+    "preciso saber sobre a vaga de",
+    "mostre os dados da vaga de",
+    "diga os detalhes da vaga de",
+    "o que envolve a vaga de",
+    "fale sobre a posição de",
+    "gostaria de entender a vaga de",
+    "há informações sobre a vaga de",
+    "pode detalhar a vaga de",
+    "me passe informações sobre a vaga de",
+    "quais os requisitos para a vaga de",
+    "quero saber a respeito da vaga de",
+    "tem mais informações da vaga de"
+]
