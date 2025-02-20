@@ -77,7 +77,8 @@ keywords_listavagas = [
     "pode compartilhar as oportunidades?",
     "há algo aberto no momento?",
     "me mostre todas as posições abertas",
-    "tem alguma posição ativa?"
+    "tem alguma posição ativa?",
+    "queria saber quais vagas nós temos?",
     "quero saber quais sao as nossas vagas",
 ]
 

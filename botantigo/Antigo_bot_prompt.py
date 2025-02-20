@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory
+from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 import random
 from listas import respostas_iniciais, keywords_listavagas, resposta_listavagas, respostas_positivas, respostas_negativas, frases_buscar_vaga
@@ -16,10 +16,9 @@ load_dotenv()  # Sem necessidade de especificar o caminho se o .env estiver na m
 
 # Recuperar a chave da API
 client = OpenAI(
-  api_key=os.environ['OPENAI_API_KEY'],  # this is also the default, it can be omitted
+  api_key=os.environ['OPENAI_API_KEY']  # this is also the default, it can be omitted
 )
-if not client.api_key:
-    raise ValueError("A chave OPENAI_API_KEY não foi encontrada no arquivo .env")
+
 
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "static")
@@ -38,77 +37,10 @@ def reconhecer_palavra_chave(mensagem, keywords_listavagas, similaridade_minima=
         mensagem, keywords_listavagas, score_cutoff=similaridade_minima
     )
     if resultado:
-        palavra_similar, similaridade = resultado[0], resultado[1]
+        palavra_similar = resultado[0]
         return True, palavra_similar
     return False, None
-
-    # Detectar respostas positivas e negativas
-    def detectar_resposta(categorias, mensagem_usuario, limiar=75):
-        resultado = process.extractOne(mensagem_usuario, categorias, scorer=fuzz.ratio)
-        if resultado and resultado[1] >= limiar:
-            return True, resultado[0]
-        return False, None
-
-    # Verificar última intenção
-    if historico_intencao:
-        ultima_intencao = historico_intencao[-1]["intencao"]
-
-        # Intenção: Mostrar métricas adicionais
-        if ultima_intencao == "mostrar_metricas":
-            positiva, _ = detectar_resposta(respostas_positivas, mensagem.lower())
-            negativa, _ = detectar_resposta(respostas_negativas, mensagem.lower())
-
-            if positiva:
-                nome_vaga = historico_intencao[-1]["vaga"]
-                metricas = buscar_metricas_por_vaga(nome_vaga)
-                if metricas:
-                    detalhes_metricas = "\n📊 **Métricas Adicionais:**\n"
-                    for metrica in metricas:
-                        detalhes_metricas += (
-                            f"- Visualizações: {metrica.get('visualizacoes', 0)}\n"
-                            f"- Inscrições: {metrica.get('inscricoes', 0)}\n"
-                            f"- Inscrições Iniciadas: {metrica.get('inscricoes_iniciadas', 0)}\n"
-                            f"- Desistências: {metrica.get('desistencias', 0)}\n"
-                        )
-                    lista_mensagens.append({"role": "assistant", "content": detalhes_metricas})
-                    # Pergunta se deseja gerar o PDF
-                    pergunta = "Deseja um relatório PDF com mais detalhes sobre essas métricas?"
-                    # Atualiza a intenção para "gerar_pdf"
-                    historico_intencao.append({"intencao": "gerar_pdf", "vaga": nome_vaga})
-                    return f"{detalhes_metricas}\n\n{pergunta}", lista_mensagens
-                else:
-                    return "Não consegui encontrar métricas adicionais para esta vaga.", lista_mensagens
-
-            elif negativa:
-                return "Entendido! Se precisar de algo mais, é só perguntar.", lista_mensagens
-
-        # Intenção: Gerar PDF
-        elif ultima_intencao == "gerar_pdf":
-            positiva, _ = detectar_resposta(respostas_positivas, mensagem.lower())
-            negativa, _ = detectar_resposta(respostas_negativas, mensagem.lower())
-
-            if positiva:
-                nome_vaga = historico_intencao[-1]["vaga"]
-                try:
-                    nome_arquivo = f"relatorio_{nome_vaga.replace(' ', '_').lower()}.pdf"
-                    caminho_destino = gerar_pdf_relatorio_flexivel(nome_arquivo=nome_arquivo, nome_vaga=nome_vaga)
-
-                    base_url = request.host_url
-                    timestamp = int(os.path.getmtime(caminho_destino))
-                    link_pdf = f"{base_url}static/{nome_arquivo}?v={timestamp}"
-
-                    resposta_pdf = f"O relatório foi gerado com sucesso!\n\nAcesse o relatório clicando no link abaixo:\n{link_pdf}"
-                    lista_mensagens.append({"role": "assistant", "content": resposta_pdf})
-                    return resposta_pdf, lista_mensagens
-                except Exception as e:
-                    print(f"Erro ao gerar relatório: {e}")
-                    return "Erro ao gerar o relatório. Tente novamente mais tarde.", lista_mensagens
-
-            elif negativa:
-                return "Entendido! Se precisar de mais informações, estou aqui para ajudar.", lista_mensagens
-
-    # Caso nenhuma intenção seja encontrada
-    return None, lista_mensagens
+    # Remove this block as it is redundant
 
 def detectar_resposta(mensagem, categorias, limiar=75):
     """
@@ -209,20 +141,23 @@ def calcular_taxas_por_vaga(nome_vaga):
         inscricoes_iniciadas = metrica.get("inscricoes_iniciadas", 0)
         inscritos = metrica.get("inscricoes", 0)
         desistencias = metrica.get("desistencias", 0)
+# Testando o agente no terminal
+    taxa_engajamento = (inscricoes_iniciadas / visualizacoes) * 100 if visualizacoes > 0 else 0
+    taxa_conversao = (inscritos / visualizacoes) * 100 if visualizacoes > 0 else 0
+    taxa_conclusao = (inscritos / inscricoes_iniciadas) * 100 if inscricoes_iniciadas > 0 else 0
+    taxa_desistencia = (desistencias / inscricoes_iniciadas) * 100 if inscricoes_iniciadas > 0 else 0
 
-        taxa_engajamento = (inscricoes_iniciadas / visualizacoes) * 100 if visualizacoes > 0 else 0
-        taxa_conversao = (inscritos / visualizacoes) * 100 if visualizacoes > 0 else 0
-        taxa_conclusao = (inscritos / inscricoes_iniciadas) * 100 if inscricoes_iniciadas > 0 else 0
-        taxa_desistencia = (desistencias / inscricoes_iniciadas) * 100 if inscricoes_iniciadas > 0 else 0
+    return (
+        f"📊 Taxas para a vaga '{nome_vaga}':\n"
+        f"- Taxa de Engajamento: {taxa_engajamento:.2f}%\n"
+        f"- Taxa de Conversão: {taxa_conversao:.2f}%\n"
+        f"- Taxa de Conclusão: {taxa_conclusao:.2f}%\n"
+        f"- Taxa de Desistência: {taxa_desistencia:.2f}%"
+    )
 
-        return (
-            f"📊 Taxas para a vaga '{nome_vaga}':\n"
-            f"- Taxa de Engajamento: {taxa_engajamento:.2f}%\n"
-            f"- Taxa de Conversão: {taxa_conversao:.2f}%\n"
-            f"- Taxa de Conclusão: {taxa_conclusao:.2f}%\n"
-            f"- Taxa de Desistência: {taxa_desistencia:.2f}%"
-        )
-
+# Testando o agente no terminal
+if __name__ == "__main__":
+    print("🤖 Assistente de RH iniciado. Pergunte sobre vagas disponíveis!")
 
 
 def contar_tokens(texto):
@@ -293,6 +228,11 @@ def enviar_mensagem(mensagem, lista_mensagens):
     match, palavra_similar = reconhecer_palavra_chave(mensagem.lower(), keywords_listavagas)
     if match:
         similaridade = fuzz.ratio(mensagem.lower(), palavra_similar.lower())
+    while True:
+        mensagem = input("Usuário: ")
+        if mensagem.lower() in ["sair", "exit", "quit"]:
+            print("Encerrando o assistente. Até mais! 👋")
+            break
         
         if similaridade >= similaridade_corte:  # Verifica se a similaridade é maior ou igual ao corte
             vagas = listar_vagas_ordenadas()
@@ -405,10 +345,5 @@ def bot():
 def index():
     return "Servidor está funcionando"
 
-@app.route('/static/<path:filename>', methods=['GET'])
-def download_file(filename):
-    # Serve arquivos da pasta static
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)

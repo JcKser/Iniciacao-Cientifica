@@ -53,7 +53,7 @@ def listar_vagas_ordenadas():
 def buscar_detalhes_vaga(nome_vaga, historico_intencao, nome_vaga_armazem):
     """
     Consulta o banco de dados para buscar os detalhes de uma vaga específica pelo nome
-    e registra a intenção de gerar relatório.
+    e retorna uma string formatada.
     """
     db = connect_db()
     if db is None:
@@ -70,25 +70,27 @@ def buscar_detalhes_vaga(nome_vaga, historico_intencao, nome_vaga_armazem):
         vaga = cursor.fetchone()
         
         if vaga:
-            introducao = random.choice(introducoes)  # Escolhe uma frase aleatória
-            # Adiciona a intenção de gerar relatório ao histórico usando o nome real da vaga
-            nome_real_vaga = vaga['nome']  # Nome correto retornado do banco
+            introducao = random.choice(introducoes)  
+            
+            # Registra a intenção
             historico_intencao.append({"intencao": "mostrar_metricas", "vaga": vaga['nome']})
-            nome_vaga_armazem.append(nome_real_vaga)  # Armazena o nome real da vaga no armazém
-
+            nome_vaga_armazem.append(vaga['nome'])
+            
+            # Aqui removemos o hífen inicial e usamos *asteriscos* para negrito (estilo WhatsApp)
             detalhes = (
-                f"{introducao}\n\n"  # Adiciona a introdução escolhida antes dos detalhes
-                f"🔎 **Vaga: {nome_real_vaga}**\n\n"
-                f"📄 **Descrição:** {vaga['descricao']}\n\n"
-                f"🛠️ **Requisitos:** {vaga['requisitos']}\n\n"
-                f"💼 **Salário:** R$ {vaga['salario']:.2f}\n\n"
-                f"👥 **Número de Vagas:** {vaga['vagas']}\n\n"
-                f"📅 **Data de Abertura:** {vaga['data_criacao']}\n\n"
-                f"📌 **Status:** {'Aberta' if vaga['status'] == 'aberto' else 'Fechada'}"
+                f"{introducao}\n\n"
+                f"🔎 *Vaga:* {vaga['nome']}\n\n"
+                f"📄 *Descrição:* {vaga['descricao']}\n\n"
+                f"🛠️ *Requisitos:* {vaga['requisitos']}\n\n"
+                f"💼 *Salário:* R$ {vaga['salario']:.2f}\n\n"
+                f"👥 *Número de Vagas:* {vaga['vagas']}\n\n"
+                f"📅 *Data de Abertura:* {vaga['data_criacao']}\n\n"
+                f"📌 *Status:* {'Aberta' if vaga['status'] == 'aberto' else 'Fechada'}"
             )
-            pergunta = random.choice(perguntas_possiveis)  # Escolhe uma pergunta aleatoriamente
-            return f"{detalhes}\n\n{pergunta}"  # Adiciona a pergunta após os detalhes
-          
+            
+            # Escolhe pergunta final
+            pergunta = random.choice(perguntas_possiveis)
+            return f"{detalhes}\n\n{pergunta}"
         else:
             return "Desculpe, não encontrei detalhes para essa vaga ou ela não está aberta no momento."
     except Exception as e:
@@ -97,6 +99,5 @@ def buscar_detalhes_vaga(nome_vaga, historico_intencao, nome_vaga_armazem):
     finally:
         if 'cursor' in locals():
             cursor.close()
-        if db.is_connected():
+        if db and db.is_connected():
             db.close()
-
