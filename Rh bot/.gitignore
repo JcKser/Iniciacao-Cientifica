@@ -1,0 +1,19 @@
+# Ignorar arquivos de cache do Python
+__pycache__/
+*.pyc
+
+# Ignorar arquivos de variáveis sensíveis
+.env
+variáveis.env
+
+# Ignorar pastas de configurações de IDEs
+.vscode/
+.idea/
+
+# Ignorar arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar arquivos e pastas específicos
+testes/
+Suport.bot - Made with Clipchamp.mp4

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> e58dbed52c4a8e89b37179ac37fad28d50c0f01b
 import os
 import smtplib
 import re
@@ -56,7 +60,11 @@ def send_support_ticket(ticket_info: dict) -> bool:
         f"Dados do Cliente:\n"
         f"Nome: {ticket_info['nome']}\n"
         f"E-mail: {ticket_info['email']}\n"
+<<<<<<< HEAD
         f"Telefone: {_format_phone(ticket_info['telefone'])}\n" # <--- MUDANÇA AQUI
+=======
+        f"Telefone: {ticket_info['telefone']}\n" # Já formatado pela função auxiliar
+>>>>>>> e58dbed52c4a8e89b37179ac37fad28d50c0f01b
         f"CPF: {ticket_info['cpf'] if ticket_info['cpf'] else 'Não informado'}\n\n"
         f"Última Dúvida (do RAG): {ticket_info['last_rag_query']}\n"
         f"-----------------------------------\n"
@@ -110,4 +118,8 @@ if __name__ == "__main__":
     if send_support_ticket(test_ticket_info):
         print("\nTeste de envio de e-mail finalizado. Verifique a caixa de entrada do destinatário!")
     else:
+<<<<<<< HEAD
         print("\nTeste de envio de e-mail falhou. Verifique os erros acima e suas configurações no .env.")
+=======
+        print("\nTeste de envio de e-mail falhou. Verifique os erros acima e suas configurações no .env.")
+>>>>>>> e58dbed52c4a8e89b37179ac37fad28d50c0f01b
