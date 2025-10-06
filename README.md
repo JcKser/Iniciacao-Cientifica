@@ -1,99 +1,183 @@
-<h1 align="center"> 🧠 Agente Customer Onboarding </h1> <p align="center"> <img alt="Python Badge" src="https://img.shields.io/badge/Python-%233776AB?style=for-the-badge&logo=python&logoColor=white"> <img alt="FastAPI Badge" src="https://img.shields.io/badge/FastAPI-%23009688?style=for-the-badge&logo=fastapi&logoColor=white"> <img alt="Docker Badge" src="https://img.shields.io/badge/Docker-%232496ED?style=for-the-badge&logo=docker&logoColor=white"> <img alt="PostgreSQL Badge" src="https://img.shields.io/badge/PostgreSQL-%234169E1?style=for-the-badge&logo=postgresql&logoColor=white"> <img alt="OpenAI Badge" src="https://img.shields.io/badge/OpenAI-%23412991?style=for-the-badge&logo=openai&logoColor=white"> </p>
+<h1 align="center"> 🤖 Agente Customer Onboarding </h1> <p align="center"> <img alt="Python Badge" src="https://img.shields.io/badge/Python-%233776AB?style=for-the-badge&logo=python&logoColor=white"> <img alt="FastAPI Badge" src="https://img.shields.io/badge/FastAPI-%23009688?style=for-the-badge&logo=fastapi&logoColor=white"> <img alt="MySQL Badge" src="https://img.shields.io/badge/MySQL-%234479A1?style=for-the-badge&logo=mysql&logoColor=white"> <img alt="Docker Badge" src="https://img.shields.io/badge/Docker-%232496ED?style=for-the-badge&logo=docker&logoColor=white"> <img alt="OpenAI Badge" src="https://img.shields.io/badge/OpenAI-%23412991?style=for-the-badge&logo=openai&logoColor=white"> </p>
 
-Um agente inteligente para auxiliar no processo de onboarding de clientes, automatizando etapas, respondendo FAQs e oferecendo orientações personalizadas em tempo real.
+Um agente inteligente projetado para automatizar o onboarding de clientes, oferecendo respostas contextuais, personalizadas e integradas a bancos de dados e documentos vetoriais.
 
 📋 Sobre o Projeto
 
-O Agente Customer Onboarding é um sistema inteligente desenvolvido no contexto de uma iniciação científica na PUC Minas, com o objetivo de aprimorar a experiência do cliente durante o processo de integração em empresas (Customer Onboarding).
+O Agente Customer Onboarding é um sistema desenvolvido como parte de uma iniciação científica na PUC Minas, com foco em Inteligência Artificial aplicada à integração de clientes.
 
-O projeto utiliza modelos de linguagem natural (LLMs) e técnicas de Processamento de Linguagem Natural (PLN) para compreender, responder e acompanhar o cliente nas etapas iniciais de uso de um produto ou serviço.
-
-Além de reduzir a carga operacional de equipes de suporte, o agente garante respostas consistentes, rápidas e personalizadas conforme o perfil de cada usuário.
+O projeto combina Processamento de Linguagem Natural (PLN) e Recuperação de Informação baseada em vetores (RAG - Retrieval-Augmented Generation), permitindo que o agente responda perguntas, forneça orientações e guie o cliente nas etapas iniciais de interação com um serviço ou produto.
 
 🚀 Funcionalidades
 
-🤖 Atendimento inteligente e contextualizado
+💬 Atendimento inteligente via LLM (Large Language Model)
 
-💬 Respostas automáticas para dúvidas frequentes (FAQ)
+🔍 Busca vetorial em base de dados local (FAISS + JSON metadata)
 
-🔗 Integração com bancos de dados e APIs externas
+🧠 Integração com banco de dados MySQL
 
-📈 Análise e registro de interações para melhoria contínua
+🧾 Ingestão automática de dados e artigos
 
-⚙️ Ambiente containerizado via Docker e PostgreSQL
+🧩 Arquitetura modular (bot, banco, vetores e utils)
 
-🧩 API REST criada com FastAPI
+⚙️ Configuração via .env para facilitar deploy e manutenção
 
 🛠️ Tecnologias Utilizadas
 
 Python 3.11+
 
-FastAPI
+FastAPI — criação de endpoints
 
-Docker & Docker Compose
+MySQL — armazenamento relacional
 
-PostgreSQL
+FAISS — indexação vetorial para RAG
 
-OpenAI API (LLMs)
+OpenAI API — modelo de linguagem natural
 
-Pydantic / SQLAlchemy
+Docker — ambiente padronizado
 
-Postman (para testes de API)
+dotenv — gerenciamento de variáveis de ambiente
 
 📁 Estrutura do Projeto
-AGENTE-ONBOARDING/
-├── app/
-│   ├── main.py                 # Ponto de entrada da API
-│   ├── routes/                 # Rotas e endpoints
-│   ├── services/               # Lógica de negócio (integração com IA e DB)
-│   ├── models/                 # Estrutura de dados e ORM
-│   ├── database/               # Conexão e schema do PostgreSQL
-│   ├── utils/                  # Funções auxiliares
-│   └── tests/                  # Testes unitários e de integração
-├── docker-compose.yml
+Tema bot/
+├── banco/
+│   ├── database.py              # Configuração e conexão com MySQL
+│   └── db.py                    # Operações de banco de dados
+│
+├── tema_bot/
+│   └── base_de_dados_vetorial/
+│       ├── articles_data.js
+│       ├── articles_faiss.index
+│       ├── articles_metadata.json
+│       ├── basevetorial.py
+│       ├── scrape_and_vector_ingest.py
+│       └── utils/
+│           ├── __init__.py
+│           └── email_utils.py   # Funções auxiliares de envio de e-mail
+│
+├── utils/
+│   ├── exceptions.py            # Tratamento de erros
+│   ├── tools.py                 # Funções utilitárias gerais
+│
+├── bot.py                       # Entrada principal do agente
+├── rag_teste.py                 # Teste e validação do modelo RAG
 ├── requirements.txt
-├── .env.example
+├── .env                         # Variáveis de ambiente
+├── Procfile                     # Deploy (Heroku ou Render)
+├── .gitignore
 └── README.md
 
 ⚙️ Instalação e Configuração
-1. Clone o Repositório
+1️⃣ Clone o Repositório
 git clone <seu-repositorio>
-cd AGENTE-ONBOARDING
+cd Tema\ bot
 
-2. Configure o Ambiente
+2️⃣ Crie o Ambiente Virtual
+python -m venv venv
+source venv/bin/activate  # (Linux/Mac)
+venv\Scripts\activate     # (Windows)
 
-Crie o arquivo .env com base no .env.example:
+3️⃣ Instale as Dependências
+pip install -r requirements.txt
 
-OPENAI_API_KEY=chave_aqui
-POSTGRES_USER=onboarding
-POSTGRES_PASSWORD=onboarding
-POSTGRES_DB=onboarding_db
-POSTGRES_PORT=5432
+4️⃣ Configure o .env
 
-3. Suba os Containers
-docker-compose up -d
+Exemplo de arquivo .env:
 
-4. Verifique os Serviços
-docker-compose ps
+OPENAI_API_KEY=sua_chave_aqui
+MYSQL_HOST=localhost
+MYSQL_USER=root
+MYSQL_PASSWORD=senha
+MYSQL_DB=onboarding
+VECTOR_DB_PATH=tema_bot/base_de_dados_vetorial/articles_faiss.index
+
+5️⃣ Execute o Projeto
+python bot.py
+
+🧠 Como o Sistema Funciona
+
+O usuário envia uma mensagem (ex: “Como faço login na plataforma?”).
+
+O módulo RAG busca contextos relevantes na base vetorial (FAISS).
+
+O modelo LLM (OpenAI API) usa esses contextos para gerar uma resposta precisa.
+
+O banco MySQL armazena logs, perfis e interações para análise posterior.
+
+🧩 Módulos Principais
+🔹 bot.py
+
+Gerencia as interações principais com o usuário e a lógica de resposta.
+
+🔹 basevetorial.py
+
+Realiza a busca semântica na base vetorial usando FAISS.
+
+🔹 scrape_and_vector_ingest.py
+
+Raspagem e indexação de dados em vetores para futura consulta.
+
+🔹 database.py / db.py
+
+Controla a conexão e manipulação de dados no MySQL.
+
+🔹 email_utils.py
+
+Gerencia envio automático de e-mails e notificações.
+
+🧪 Testes
+Teste de Funcionamento Geral
+python rag_teste.py
 
 
-Você deve ver:
+Verifica:
 
-PostgreSQL rodando na porta 5432
+Conexão com MySQL
 
-FastAPI rodando na porta 8000
+Leitura da base vetorial
 
-5. Acesse a API
+Resposta do modelo RAG
 
-Acesse em:
-🔗 http://localhost:8000/docs (Swagger UI)
+Retorno JSON do bot
 
-🧠 Fluxo de Funcionamento
+🐛 Solução de Problemas
+Banco de Dados Não Conecta
 
-O cliente envia uma mensagem via interface (chat/webhook).
+Verifique se o MySQL está rodando na porta correta (3306)
 
-O agente processa o texto usando LLM da OpenAI.
+Confirme credenciais no .env
 
-A resposta é contextualizada com dados armazenados no PostgreSQL.
+Execute:
 
-A API retorna a resposta ao usuário final em formato JSON.
+mysql -u root -p
+
+Modelo Não Retorna Resposta
+
+Verifique a variável OPENAI_API_KEY
+
+Teste uma chamada direta com o SDK da OpenAI
+
+Erro “FAISS index not found”
+
+Confirme se articles_faiss.index está no caminho configurado
+
+Rode novamente scrape_and_vector_ingest.py
+
+📚 Comandos Úteis
+# Instalar dependências
+pip install -r requirements.txt
+
+# Executar bot principal
+python bot.py
+
+# Executar testes RAG
+python rag_teste.py
+
+# Gerar nova base vetorial
+python tema_bot/base_de_dados_vetorial/scrape_and_vector_ingest.py
+
+🧾 Licença
+
+Este projeto está licenciado sob a MIT License.
+
+Desenvolvido como parte da Iniciação Científica na PUC Minas — Agente Customer Onboarding 🚀
