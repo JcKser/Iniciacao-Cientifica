@@ -38,62 +38,6 @@ Docker — ambiente padronizado
 
 dotenv — gerenciamento de variáveis de ambiente
 
-📁 Estrutura do Projeto
-Tema bot/
-├── banco/
-│   ├── database.py              # Configuração e conexão com MySQL
-│   └── db.py                    # Operações de banco de dados
-│
-├── tema_bot/
-│   └── base_de_dados_vetorial/
-│       ├── articles_data.js
-│       ├── articles_faiss.index
-│       ├── articles_metadata.json
-│       ├── basevetorial.py
-│       ├── scrape_and_vector_ingest.py
-│       └── utils/
-│           ├── __init__.py
-│           └── email_utils.py   # Funções auxiliares de envio de e-mail
-│
-├── utils/
-│   ├── exceptions.py            # Tratamento de erros
-│   ├── tools.py                 # Funções utilitárias gerais
-│
-├── bot.py                       # Entrada principal do agente
-├── rag_teste.py                 # Teste e validação do modelo RAG
-├── requirements.txt
-├── .env                         # Variáveis de ambiente
-├── Procfile                     # Deploy (Heroku ou Render)
-├── .gitignore
-└── README.md
-
-⚙️ Instalação e Configuração
-1️⃣ Clone o Repositório
-git clone <seu-repositorio>
-cd Tema\ bot
-
-2️⃣ Crie o Ambiente Virtual
-python -m venv venv
-source venv/bin/activate  # (Linux/Mac)
-venv\Scripts\activate     # (Windows)
-
-3️⃣ Instale as Dependências
-pip install -r requirements.txt
-
-4️⃣ Configure o .env
-
-Exemplo de arquivo .env:
-
-OPENAI_API_KEY=sua_chave_aqui
-MYSQL_HOST=localhost
-MYSQL_USER=root
-MYSQL_PASSWORD=senha
-MYSQL_DB=onboarding
-VECTOR_DB_PATH=tema_bot/base_de_dados_vetorial/articles_faiss.index
-
-5️⃣ Execute o Projeto
-python bot.py
-
 🧠 Como o Sistema Funciona
 
 O usuário envia uma mensagem (ex: “Como faço login na plataforma?”).
