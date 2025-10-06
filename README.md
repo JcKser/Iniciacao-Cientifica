@@ -1,109 +1,99 @@
-🧠 Agente Customer Onboarding
+<h1 align="center"> 🧠 Agente Customer Onboarding </h1> <p align="center"> <img alt="Python Badge" src="https://img.shields.io/badge/Python-%233776AB?style=for-the-badge&logo=python&logoColor=white"> <img alt="FastAPI Badge" src="https://img.shields.io/badge/FastAPI-%23009688?style=for-the-badge&logo=fastapi&logoColor=white"> <img alt="Docker Badge" src="https://img.shields.io/badge/Docker-%232496ED?style=for-the-badge&logo=docker&logoColor=white"> <img alt="PostgreSQL Badge" src="https://img.shields.io/badge/PostgreSQL-%234169E1?style=for-the-badge&logo=postgresql&logoColor=white"> <img alt="OpenAI Badge" src="https://img.shields.io/badge/OpenAI-%23412991?style=for-the-badge&logo=openai&logoColor=white"> </p>
 
-Autor: Júlio César Gonzaga Ferreira Silva
-Instituição: PUC Minas
-Área: Inteligência Artificial
-Tipo de projeto: Iniciação Científica
+Um agente inteligente para auxiliar no processo de onboarding de clientes, automatizando etapas, respondendo FAQs e oferecendo orientações personalizadas em tempo real.
 
-📘 Descrição do Projeto
+📋 Sobre o Projeto
 
-O Agente Customer Onboarding é um sistema inteligente desenvolvido para automatizar o processo de integração de clientes (onboarding) em empresas de diferentes segmentos. O projeto visa criar um assistente conversacional baseado em IA, capaz de fornecer informações, responder perguntas frequentes e guiar o cliente nas etapas iniciais de uso de produtos ou serviços.
+O Agente Customer Onboarding é um sistema inteligente desenvolvido no contexto de uma iniciação científica na PUC Minas, com o objetivo de aprimorar a experiência do cliente durante o processo de integração em empresas (Customer Onboarding).
 
-O agente foi projetado com foco em eficiência, personalização e experiência do usuário, reduzindo o tempo de resposta e a carga operacional sobre equipes de suporte.
+O projeto utiliza modelos de linguagem natural (LLMs) e técnicas de Processamento de Linguagem Natural (PLN) para compreender, responder e acompanhar o cliente nas etapas iniciais de uso de um produto ou serviço.
 
-🎯 Objetivos
+Além de reduzir a carga operacional de equipes de suporte, o agente garante respostas consistentes, rápidas e personalizadas conforme o perfil de cada usuário.
 
-Automatizar o processo de onboarding de clientes com suporte inteligente.
+🚀 Funcionalidades
 
-Oferecer respostas contextuais e personalizadas a perguntas frequentes (FAQ).
+🤖 Atendimento inteligente e contextualizado
 
-Integrar informações corporativas de forma segura e escalável.
+💬 Respostas automáticas para dúvidas frequentes (FAQ)
 
-Aprimorar a experiência do usuário no primeiro contato com a empresa.
+🔗 Integração com bancos de dados e APIs externas
 
-Explorar o uso de modelos de linguagem (LLMs) e processamento de linguagem natural (PLN) aplicados a contextos empresariais.
+📈 Análise e registro de interações para melhoria contínua
 
-🧩 Tecnologias Utilizadas
+⚙️ Ambiente containerizado via Docker e PostgreSQL
 
-Python — linguagem base para desenvolvimento.
+🧩 API REST criada com FastAPI
 
-Framework de IA: OpenAI API / LLMs (para entendimento de linguagem natural).
+🛠️ Tecnologias Utilizadas
 
-FastAPI — criação de endpoints e interface de comunicação.
+Python 3.11+
 
-Banco de Dados: PostgreSQL (armazenamento de interações e perfis de clientes).
+FastAPI
 
-Docker — ambiente de desenvolvimento isolado e replicável.
+Docker & Docker Compose
 
-n8n (self-hosted) — integração e automação de fluxos.
+PostgreSQL
 
-Postman — testes e validação de rotas da API.
+OpenAI API (LLMs)
 
-⚙️ Funcionalidades
+Pydantic / SQLAlchemy
 
-🗣️ Chat inteligente: comunicação fluida e contextual com o cliente.
+Postman (para testes de API)
 
-📚 Base de conhecimento dinâmico: integração com dados da empresa e FAQs.
+📁 Estrutura do Projeto
+AGENTE-ONBOARDING/
+├── app/
+│   ├── main.py                 # Ponto de entrada da API
+│   ├── routes/                 # Rotas e endpoints
+│   ├── services/               # Lógica de negócio (integração com IA e DB)
+│   ├── models/                 # Estrutura de dados e ORM
+│   ├── database/               # Conexão e schema do PostgreSQL
+│   ├── utils/                  # Funções auxiliares
+│   └── tests/                  # Testes unitários e de integração
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example
+└── README.md
 
-🔄 Automação de fluxos: integração com ferramentas internas via n8n.
+⚙️ Instalação e Configuração
+1. Clone o Repositório
+git clone <seu-repositorio>
+cd AGENTE-ONBOARDING
 
-🧾 Registro de interações: histórico de conversas armazenado para análise.
+2. Configure o Ambiente
 
-📊 Personalização: respostas adaptadas conforme o perfil do cliente.
+Crie o arquivo .env com base no .env.example:
 
-🧠 Arquitetura
+OPENAI_API_KEY=chave_aqui
+POSTGRES_USER=onboarding
+POSTGRES_PASSWORD=onboarding
+POSTGRES_DB=onboarding_db
+POSTGRES_PORT=5432
 
-O projeto segue uma arquitetura modular composta por:
+3. Suba os Containers
+docker-compose up -d
 
-Camada de Interface – responsável pela interação com o usuário (via API REST).
-
-Camada de Processamento – onde ocorre o tratamento de linguagem natural (NLP/NLU).
-
-Camada de Dados – armazena informações sobre clientes, contextos e interações.
-
-Camada de Integração – conecta o agente com sistemas corporativos externos.
-
-🚀 Como Executar o Projeto
-
-Clone o repositório:
-
-git clone https://github.com/JcKser/Customer-Onboarding-Agent.git
-cd Customer-Onboarding-Agent
-
-
-Configure as variáveis de ambiente:
-
-Crie um arquivo .env com as chaves da API e credenciais do banco.
-
-Inicie os containers:
-
-docker-compose up --build
+4. Verifique os Serviços
+docker-compose ps
 
 
-Acesse a API:
+Você deve ver:
 
-Endpoint principal: http://localhost:8000
+PostgreSQL rodando na porta 5432
 
-Documentação Swagger: http://localhost:8000/docs
+FastAPI rodando na porta 8000
 
-📈 Resultados Esperados
+5. Acesse a API
 
-Redução de até 70% no tempo médio de onboarding de novos clientes.
+Acesse em:
+🔗 http://localhost:8000/docs (Swagger UI)
 
-Diminuição de tickets de suporte relacionados a dúvidas iniciais.
+🧠 Fluxo de Funcionamento
 
-Coleta estruturada de dados para análise de comportamento de novos clientes.
+O cliente envia uma mensagem via interface (chat/webhook).
 
-🧾 Licença
+O agente processa o texto usando LLM da OpenAI.
 
-Este projeto está licenciado sob a MIT License
-.
+A resposta é contextualizada com dados armazenados no PostgreSQL.
 
-👤 Contato
-
-Autor: Júlio César Gonzaga Ferreira Silva
-📧 [seuemail@pucminas.br
-]
-💼 LinkedIn
-
-🐙 GitHub
+A API retorna a resposta ao usuário final em formato JSON.
